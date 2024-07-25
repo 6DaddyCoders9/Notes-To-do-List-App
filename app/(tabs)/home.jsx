@@ -11,17 +11,19 @@ import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images } from "../../constants";
 import EmptyState from "../../components/EmptyState";
-import { fetchTodos, updateTodo, deleteTodo } from "../../lib/appwrite"; // Import your API functions
+import { fetchTodos, updateTodo, createTodo } from "../../lib/appwrite";
 import { useGlobalContext } from "../../context/GlobalProvider";
 import { router } from "expo-router";
-import CustomButton from "../../components/CustomButton"; // Import CustomButton component
-import InfoBox from "../../components/InfoBox"; // Import InfoBox component
+import TodoItem from "../../components/TodoItem";
 
 const TodoListPage = () => {
   const { user } = useGlobalContext();
   const [todos, setTodos] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [newTodo, setNewTodo] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Function to fetch todos
   const loadTodos = async () => {
     try {
       const fetchedTodos = await fetchTodos();
@@ -31,63 +33,54 @@ const TodoListPage = () => {
     }
   };
 
+  // Polling mechanism to refresh todos periodically
   useEffect(() => {
-    loadTodos();
+    loadTodos(); // Initial load
+    const intervalId = setInterval(() => {
+      loadTodos();
+    }, 5 * 60 * 1000); // Refresh every 5 minutes
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
+  // Refresh handler for pull-to-refresh
   const onRefresh = async () => {
     setRefreshing(true);
     await loadTodos();
     setRefreshing(false);
   };
 
+  // Handler to toggle todo completion status
   const handleToggleTodo = async (todo) => {
     try {
       const updatedTodo = await updateTodo(todo.$id, {
         isCompleted: !todo.isCompleted,
       });
-      setTodos(todos.map((t) => (t.$id === todo.$id ? updatedTodo : t)));
+      setTodos((prevTodos) =>
+        prevTodos.map((t) => (t.$id === todo.$id ? updatedTodo : t))
+      );
     } catch (error) {
       Alert.alert("Error", "Failed to update todo");
     }
   };
 
-  const handleDeleteTodo = async (todoId) => {
-    try {
-      await deleteTodo(todoId);
-      setTodos(todos.filter((t) => t.$id !== todoId));
-    } catch (error) {
-      Alert.alert("Error", "Failed to delete todo");
-    }
-  };
-
-  const renderItem = ({ item }) => (
-    <View className="bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 p-4 my-3 rounded-lg shadow-lg">
-      <View className="flex-row justify-between items-center mb-2">
-        <Text className={`text-xl font-semibold ${item.isCompleted ? 'line-through text-gray-400' : 'text-white'}`}>
-          {item.title}
-        </Text>
-        {item.isCompleted && (
-          <Image source={icons.check} className="w-6 h-6" resizeMode="contain" />
-        )}
+  // Render header component
+  const renderHeader = () => (
+    <View className="p-3 bg-blue-600">
+      <View className="flex-row">
+        <Image source={images.logo} className="w-40 h-20" resizeMode="contain" />
+        <View className="pt-4 pl-12">
+          <Text className="font-pmedium text-sm text-gray-100">Welcome Back,</Text>
+          <Text className="text-xl font-psemibold text-white">{user?.username}</Text>
+        </View>
       </View>
-      <Text className="text-white text-base mb-4">
-        {item.description}
-      </Text>
-      <View className="flex-row justify-between">
-        <CustomButton
-          title={item.isCompleted ? "Undo" : "Complete"}
-          handlePress={() => handleToggleTodo(item)}
-          containerStyles="bg-blue-600 px-3 py-2 rounded-lg shadow-md"
-          textStyles="text-white"
-        />
-        <CustomButton
-          title="Delete"
-          handlePress={() => handleDeleteTodo(item.$id)}
-          containerStyles="bg-red-600 px-3 py-2 rounded-lg shadow-md"
-          textStyles="text-white"
-        />
-      </View>
+      <TouchableOpacity
+        className="bg-green-500 px-4 py-2 rounded-lg mt-4"
+        onPress={() => router.push('todo/create-todo')}
+      >
+        <Text className="text-white text-center">Add Todo</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -96,34 +89,16 @@ const TodoListPage = () => {
       <FlatList
         data={todos}
         keyExtractor={(item) => item.$id}
-        renderItem={renderItem}
-        ListHeaderComponent={() => (
-          <View className="my-6 px-4 space-y-6">
-            <View className="justify-between items-start flex-row">
-            <View>
-              <Text className="font-pmedium text-sm text-gray-100">Welcome Back,</Text>
-              <Text className="text-2xl font-psemibold text-white">{user?.username}</Text>
-            </View>
-            <View className="mt-1.5">
-              <Image source={images.logo} className="w-[150px] -top-8" resizeMode="contain" />
-            </View>
-          </View>
-            <CustomButton
-              title="Add Todo"
-              handlePress={() => router.push('todo/create-todo')}
-              containerStyles="bg-green-500 px-4 py-2 rounded-lg"
-              textStyles="text-white text-center"
-            />
-          </View>
-        )}
-        ListEmptyComponent={() => (
-          <EmptyState
-            title="No Todos Found"
+        renderItem={({ item }) => (
+          <TodoItem
+            item={item}
+            onToggle={() => handleToggleTodo(item)}
+            onPress={() => router.push(`/todo/${item.$id}`)}
           />
         )}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={<EmptyState title="No Todos Found" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
     </SafeAreaView>
   );

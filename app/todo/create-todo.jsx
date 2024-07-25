@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { SafeAreaView, View, Alert, Text } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { createTodo } from '../../lib/appwrite'; // Import your API function
-import CustomButton from '../../components/CustomButton'; // Import the CustomButton component
-import FormField from '../../components/FormField'; // Import the FormField component
+import { useNavigation } from 'expo-router';
+import { createTodo } from '../../lib/appwrite';
+import CustomButton from '../../components/CustomButton';
+import FormField from '../../components/FormField';
 
 const CreateTodoPage = () => {
   const navigation = useNavigation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleCreateTodo = async () => {
     if (!title || !description) {
@@ -17,15 +16,12 @@ const CreateTodoPage = () => {
       return;
     }
 
-    setIsLoading(true);
     try {
       await createTodo(title, description);
       Alert.alert("Success", "Todo created successfully");
-      navigation.goBack(); // Go back to the Todo list page
+      navigation.goBack();
     } catch (error) {
       Alert.alert("Error", "Failed to create todo");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -54,7 +50,6 @@ const CreateTodoPage = () => {
           handlePress={handleCreateTodo}
           containerStyles="bg-green-500 px-4 py-2 rounded-lg mt-6"
           textStyles="text-white text-center"
-          isLoading={isLoading}
         />
       </View>
     </SafeAreaView>

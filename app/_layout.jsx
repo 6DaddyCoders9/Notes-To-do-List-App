@@ -32,6 +32,9 @@ const RootLayout = () => {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="todo/create-todo" options={{ headerShown: false }} />
+        <Stack.Screen name="todo/[todoId]" options={{ headerShown: false }} />
+        <Stack.Screen name="note/create-note" options={{ headerShown: false }} />
+        <Stack.Screen name="note/[Id]" options={{ headerShown: false }} />
       </Stack>
     </GlobalProvider>
   );
